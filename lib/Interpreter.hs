@@ -83,7 +83,7 @@ eval1 go e = case e of
     case fun of
       Lam b -> do
         arg <- go a
-        pos <- alloc (show arg)
+        pos <- alloc arg
         modify (M.insert pos arg)
         go (instantiate1 arg b) -- instantiate1 performs variable substitution
       other -> go (App other a)
