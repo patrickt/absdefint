@@ -24,7 +24,7 @@ data Exp a
   | Num Int                    -- | Literals
   | If (Exp a) (Exp a) (Exp a) -- | Conditions
   | App (Exp a) (Exp a)        -- | Function application
-  | Rec Name (Exp a)           -- | Let-binding (wrong?)
+  | Let Name (Exp a) (Exp a)   -- | Let-binding (recursive)
   | Lam (Scope () Exp a)       -- | Lambdas
   | Op Bin (Exp a) (Exp a)     -- | Arithmetic
     deriving (Functor, Foldable, Traversable)
