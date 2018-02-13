@@ -16,7 +16,7 @@ import qualified Data.Map             as M
 
 -- | Errors
 data Err e = DivideByZero
-           | NotFound Name
+           | NotFound e
            | BadArgs Bin (Exp e) (Exp e)
            | BadApp (Exp e) (Exp e)
            deriving (Show, Eq)
@@ -25,31 +25,31 @@ data Err e = DivideByZero
 type ID = Int
 
 -- | Environments map names to IDs.
-type Env = Map Name ID
+type Env e = Map e ID
 
 -- | Stores map IDs to values.
 type Store e = Map ID (Exp e)
 
 -- | A monad for definitional interpreters that track bindings in an 'Env' and values in a 'Store'.
-newtype Interp e a = Interp { runInterp :: ReaderT Env (ExceptT (Err e) (State (Store e))) a }
+newtype Interp e a = Interp { runInterp :: ReaderT (Env e) (ExceptT (Err e) (State (Store e))) a }
   deriving ( Functor
            , Applicative
            , Monad
            , MonadState (Store e)
            , MonadError (Err e)
-           , MonadReader Env
+           , MonadReader (Env e)
            )
 
 type MonadInterp m e = ( MonadState (Store e) m
                        , MonadError (Err e) m
-                       , MonadReader Env m)
+                       , MonadReader (Env e) m)
 
 -- | This is the first interpreter. It is invoked in an open-recursive style with 'fix'
 -- (the Y combinator) to provide open interpretation.
-eval1 :: (MonadInterp m Name)
-      => (Exp Name -> m (Exp Name))
-      -> Exp Name
-      -> m (Exp Name)
+eval1 :: (Show a, Ord a, MonadInterp m a)
+      => (Exp a -> m (Exp a))
+      -> Exp a
+      -> m (Exp a)
 eval1 go e = case e of
   -- Numbers and lambdas evaluate to themselves
   Num x -> return (Num x)
@@ -89,7 +89,7 @@ eval1 go e = case e of
       other -> go (App other a)
 
 -- | Performs variable lookups.
-find :: (Show a, MonadInterp m a) => Name -> Env -> m (Exp a)
+find :: (Show a, Ord a, MonadInterp m a) => a -> (Env a) -> m (Exp a)
 find n e = do
   st <- get
   case M.lookup n e >>= flip M.lookup st of
@@ -107,12 +107,12 @@ delta op (Num a) (Num b) = pure $ case op of
 delta op a b = throwError (BadArgs op a b)
 
 -- | Computes the next available location in the store.
-alloc :: MonadInterp m e => Name -> m Int
+alloc :: MonadInterp m e => a -> m Int
 alloc _ = M.size <$> get
 
 -- | Executes an interpreter; equivalent to ADI's runm
-execInterp :: Interp e a -> (Either (Err e) a, Store e)
+execInterp :: Ord e => Interp e a -> (Either (Err e) a, Store e)
 execInterp = flip runState mempty . runExceptT . flip runReaderT mempty . runInterp
 
-eval :: Exp Name -> (Either (Err Name) (Exp Name), Store Name)
+eval :: (Show a, Ord a) => Exp a -> (Either (Err a) (Exp a), Store a)
 eval = execInterp . fix eval1
