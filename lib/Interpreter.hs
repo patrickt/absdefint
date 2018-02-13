@@ -44,15 +44,11 @@ type MonadInterp m e = ( MonadState (Store e) m
                        , MonadError (Err e) m
                        , MonadReader Env m)
 
--- | Executes an interpreter; equivalent to ADI's runm
-execInterp :: Interp e a -> (Either (Err e) a, Store e)
-execInterp = flip runState mempty . runExceptT . flip runReaderT mempty . runInterp
-
 -- | This is the first interpreter. It is invoked in an open-recursive style with 'fix'
 -- (the Y combinator) to provide open interpretation.
-eval1 :: (MonadInterp m e, e ~ Name)
-      => (Exp e -> m (Exp e))
-      -> Exp e
+eval1 :: (MonadInterp m Name)
+      => (Exp Name -> m (Exp Name))
+      -> Exp Name
       -> m (Exp Name)
 eval1 go e = case e of
   -- Numbers and lambdas evaluate to themselves
@@ -81,11 +77,14 @@ eval1 go e = case e of
     return res
   -- Application
   App f a -> do
-    arg <- go a
     fun <- go f
     case fun of
-      Lam b -> go (instantiate1 arg b) -- instantiate1 performs variable substitution
-      other -> throwError (BadApp f other)
+      Lam b -> do
+        arg <- go a
+        pos <- alloc (show arg)
+        modify (M.insert pos arg)
+        go (instantiate1 arg b) -- instantiate1 performs variable substitution
+      other -> go (App other a)
 
 -- | Performs variable lookups.
 find :: MonadInterp m a => Name -> Env -> m (Exp a)
@@ -108,3 +107,10 @@ delta op a b = throwError (BadArgs op a b)
 -- | Computes the next available location in the store.
 alloc :: MonadInterp m e => Name -> m Int
 alloc _ = M.size <$> get
+
+-- | Executes an interpreter; equivalent to ADI's runm
+execInterp :: Interp e a -> (Either (Err e) a, Store e)
+execInterp = flip runState mempty . runExceptT . flip runReaderT mempty . runInterp
+
+eval :: Exp Name -> (Either (Err Name) (Exp Name), Store Name)
+eval = execInterp . fix eval1
