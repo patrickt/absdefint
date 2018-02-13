@@ -11,7 +11,6 @@ module Syntax
     , isZero
     ) where
 
-import           Bound
 import           Control.Monad (ap)
 import           Data.Deriving
 import           Data.Functor.Classes
@@ -25,8 +24,8 @@ data Exp a
   | Num Int                    -- | Literals
   | If (Exp a) (Exp a) (Exp a) -- | Conditions
   | App (Exp a) (Exp a)        -- | Function application
-  | Let a (Exp a) (Exp a)   -- | Let-binding (recursive)
-  | Lam (Scope () Exp a)       -- | Lambdas
+  | Let a (Exp a) (Exp a)      -- | Let-binding (recursive)
+  | Lam a (Exp a)              -- | Lambdas
   | Op Bin (Exp a) (Exp a)     -- | Arithmetic
     deriving (Functor, Foldable, Traversable)
 
@@ -49,12 +48,12 @@ instance Monad Exp where
   If a b c >>= f  = If (a >>= f) (b >>= f) (c >>= f)
   App a b >>= f   = App (a >>= f) (b >>= f)
   Let n a v >>= f = f n >>= (\x -> Let x (a >>= f) (v >>= f))
-  Lam e >>= f     = Lam (e >>>= f)
+  Lam n e >>= f   = f n >>= (\x -> Lam x (e >>= f))
   Op a b c >>= f  = Op a (b >>= f) (c >>= f)
 
 -- Smart constructor for lambdas
 lam :: Eq a => a -> Exp a -> Exp a
-lam v b = Lam (abstract1 v b)
+lam = Lam
 
 -- Conditional tester
 isZero :: Exp a -> Bool

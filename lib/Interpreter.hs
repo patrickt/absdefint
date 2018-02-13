@@ -7,7 +7,6 @@ module Interpreter where
 
 import           Syntax
 
-import           Bound
 import           Control.Monad.Except
 import           Control.Monad.Reader
 import           Control.Monad.State
@@ -53,7 +52,7 @@ eval1 :: (Show a, Ord a, MonadInterp m a)
 eval1 go e = case e of
   -- Numbers and lambdas evaluate to themselves
   Num x -> return (Num x)
-  Lam b -> return (Lam b)
+  Lam n b -> return (Lam n b)
   -- Variables call out to 'find' to perform lookups
   Var n -> ask >>= find n >>= go
   -- Straightforward if application
@@ -81,11 +80,13 @@ eval1 go e = case e of
   App f a -> do
     fun <- go f
     case fun of
-      Lam b -> do
-        arg <- go a
-        pos <- alloc arg
-        modify (M.insert pos arg)
-        go (instantiate1 arg b) -- instantiate1 performs variable substitution
+      Lam n b -> do
+        pos <- alloc n
+        let augment = M.insert n pos
+        local augment $ do
+          arg <- go a
+          modify (M.insert pos arg)
+          go b
       other -> go (App other a)
 
 -- | Performs variable lookups.
