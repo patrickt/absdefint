@@ -12,10 +12,10 @@ import           Data.Map             (Map)
 import qualified Data.Map             as M
 
 -- | Errors
-data Err = DivideByZero
-         | NotFound Name
-         | BadArgs Bin String String
-         | BadApp String String
+data Err e = DivideByZero
+           | NotFound Name
+           | BadArgs Bin (Exp e) (Exp e)
+           | BadApp (Exp e) (Exp e)
            deriving (Show, Eq)
 
 -- | ID represents locations in a 'Store'.
@@ -28,11 +28,17 @@ type Env = Map Name ID
 type Store e = Map ID (Exp e)
 
 -- | A monad for definitional interpreters that track bindings in an 'Env' and values in a 'Store'.
-newtype Interp e a = Interp { runInterp :: ReaderT Env (ExceptT Err (State (Store e))) a }
-  deriving (Functor, Applicative, Monad, MonadState (Store e), MonadError Err, MonadReader Env)
+newtype Interp e a = Interp { runInterp :: ReaderT Env (ExceptT (Err e) (State (Store e))) a }
+  deriving ( Functor
+           , Applicative
+           , Monad
+           , MonadState (Store e)
+           , MonadError (Err e)
+           , MonadReader Env
+           )
 
 -- | Executes an interpreter; equivalent to ADI's runm
-execInterp :: Interp e a -> (Either Err a, Store e)
+execInterp :: Interp e a -> (Either (Err e) a, Store e)
 execInterp = flip runState mempty . runExceptT . flip runReaderT mempty . runInterp
 
 -- | This is the first interpreter. It is invoked in an open-recursive style with 'fix'
@@ -69,7 +75,7 @@ eval1 go e = case e of
     fun <- go f
     case fun of
       Lam b -> go (instantiate1 arg b) -- instantiate1 performs variable substitution
-      other -> throwError (BadApp (show f) (show other))
+      other -> throwError (BadApp f other)
 
 -- | Performs variable lookups.
 find :: Name -> Env -> Interp e (Exp e)
@@ -80,14 +86,14 @@ find n e = do
     Just f  -> return f
 
 -- | Performs arithmetic.
-delta :: Show a => Bin -> Exp a -> Exp a -> Interp e Int
+delta :: Show a => Bin -> Exp a -> Exp a -> Interp a Int
 delta Div _ (Num 0)      = throwError DivideByZero
 delta op (Num a) (Num b) = pure $ case op of
   Add -> a + b
   Sub -> a - b
   Mul -> a * b
   Div -> a `div` b
-delta op a b = throwError (BadArgs op (show a) (show b))
+delta op a b = throwError (BadArgs op a b)
 
 -- | Computes the next available location in the store.
 alloc :: Name -> Interp e Int
