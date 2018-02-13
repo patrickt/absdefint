@@ -1,4 +1,7 @@
+{-# LANGUAGE ConstraintKinds            #-}
+{-# LANGUAGE FlexibleContexts           #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE TypeFamilies               #-}
 
 module Interpreter where
 
@@ -37,13 +40,20 @@ newtype Interp e a = Interp { runInterp :: ReaderT Env (ExceptT (Err e) (State (
            , MonadReader Env
            )
 
+type MonadInterp m e = ( MonadState (Store e) m
+                       , MonadError (Err e) m
+                       , MonadReader Env m)
+
 -- | Executes an interpreter; equivalent to ADI's runm
 execInterp :: Interp e a -> (Either (Err e) a, Store e)
 execInterp = flip runState mempty . runExceptT . flip runReaderT mempty . runInterp
 
 -- | This is the first interpreter. It is invoked in an open-recursive style with 'fix'
 -- (the Y combinator) to provide open interpretation.
-eval1 :: (Exp Name -> Interp Name (Exp Name)) -> Exp Name -> Interp Name (Exp Name)
+eval1 :: (MonadInterp m e, e ~ Name)
+      => (Exp e -> m (Exp e))
+      -> Exp e
+      -> m (Exp Name)
 eval1 go e = case e of
   -- Numbers and lambdas evaluate to themselves
   Num x -> return (Num x)
@@ -78,7 +88,7 @@ eval1 go e = case e of
       other -> throwError (BadApp f other)
 
 -- | Performs variable lookups.
-find :: Name -> Env -> Interp e (Exp e)
+find :: MonadInterp m a => Name -> Env -> m (Exp a)
 find n e = do
   st <- get
   case M.lookup n e >>= flip M.lookup st of
@@ -86,7 +96,7 @@ find n e = do
     Just f  -> return f
 
 -- | Performs arithmetic.
-delta :: Show a => Bin -> Exp a -> Exp a -> Interp a Int
+delta :: (MonadInterp m a, Show a) => Bin -> Exp a -> Exp a -> m Int
 delta Div _ (Num 0)      = throwError DivideByZero
 delta op (Num a) (Num b) = pure $ case op of
   Add -> a + b
@@ -96,5 +106,5 @@ delta op (Num a) (Num b) = pure $ case op of
 delta op a b = throwError (BadArgs op a b)
 
 -- | Computes the next available location in the store.
-alloc :: Name -> Interp e Int
+alloc :: MonadInterp m e => Name -> m Int
 alloc _ = M.size <$> get
