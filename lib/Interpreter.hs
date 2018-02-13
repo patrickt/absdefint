@@ -12,7 +12,6 @@ import           Control.Monad.Except
 import           Control.Monad.Reader
 import           Control.Monad.State
 import           Data.Map             (Map)
-import           Debug.Trace
 import qualified Data.Map             as M
 
 -- | Errors
@@ -71,10 +70,12 @@ eval1 go e = case e of
   Let n v a -> do
     pos <- alloc n
     let augment = M.insert n pos
-    -- Evaluate this recursively with a local environment
+    -- Evaluate this recursively with a local environment (letrec)
     local augment $ do
-      -- Insert the result into the symbol table
-      modify (M.insert pos v)
+      arg <- go v
+      -- Insert the result of evaluating the argument into the symbol table
+      modify (M.insert pos arg)
+      -- eval the body
       go a
   -- Application
   App f a -> do
@@ -91,7 +92,6 @@ eval1 go e = case e of
 find :: (Show a, MonadInterp m a) => Name -> Env -> m (Exp a)
 find n e = do
   st <- get
-  en <- ask
   case M.lookup n e >>= flip M.lookup st of
     Nothing -> throwError (NotFound n)
     Just f  -> return f
