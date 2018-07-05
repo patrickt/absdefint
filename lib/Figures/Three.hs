@@ -23,14 +23,10 @@ type TraceMonad = '[ Reader Env
                    , Writer [Log]
                    ]
 
-evalTrace1 :: ( Member (Reader Env) effs
-             , Member (State Store) effs
-             , Member (Error Failure) effs
-             , Member (Writer [Log]) effs
-             )
-          => (Evaluator effs -> Evaluator effs)
-          -> Evaluator effs
-          -> Evaluator effs
+evalTrace1 :: Members TraceMonad effs
+           => (Evaluator effs -> Evaluator effs)
+           -> Evaluator effs
+           -> Evaluator effs
 evalTrace1 base recur e = do
   traced <- Log e <$> ask <*> get
   tell [traced]

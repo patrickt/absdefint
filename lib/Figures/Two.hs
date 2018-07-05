@@ -1,3 +1,9 @@
+{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE DeriveFunctor #-}
+{-# LANGUAGE DeriveFoldable #-}
+{-# LANGUAGE DeriveTraversable #-}
+
 module Figures.Two
     ( Bin (..)
     , Exp (..)
@@ -10,6 +16,7 @@ module Figures.Two
     , ext
     , find
     , isZero
+    , subexps
     , notFound
     , alloc
     , divideByZero
@@ -22,6 +29,8 @@ import Data.Map (Map, lookup, insert)
 import Control.Monad.Freer
 import Control.Monad.Freer.Error
 import Control.Monad.Freer.State
+import Data.Functor.Foldable
+import Data.Functor.Foldable.TH
 
 type Name = String
 
@@ -42,7 +51,12 @@ data Exp
   | Lam Name Exp         -- | Lambdas
   | Op Bin Exp Exp       -- | Arithmetic
   | Closure Exp Env      -- | Datum + scope
-    deriving (Eq, Show)
+    deriving (Eq, Show, Ord)
+
+makeBaseFunctor ''Exp
+
+subexps :: Exp -> [Exp]
+subexps = para (foldMap (uncurry (:)))
 
 instance Num Exp where
   fromInteger = Num . fromInteger

@@ -20,10 +20,7 @@ import Figures.Two
 
 type EvalMonad = '[Reader Env, State Store, Error Failure]
 
-eval1 :: ( Member (Reader Env) effs
-         , Member (State Store) effs
-         , Member (Error Failure) effs
-         )
+eval1 :: Members EvalMonad effs
       => Evaluator effs
       -> Evaluator effs
 eval1 recur = \case
@@ -35,7 +32,7 @@ eval1 recur = \case
   If cond l r -> do
     v <- recur cond
     let z = isZero v
-    recur (if z then l else r)
+    recur (if z then r else l)
   Op bin l' r' -> do
     l <- recur l'
     r <- recur r'
