@@ -21,6 +21,7 @@ library
                        Figures.Three
                        Figures.Four
                        Figures.FiveSix
+                       Figures.Seven
   ghc-options:         -Wall -Werror
   build-depends:       base
                      , mtl

@@ -1,8 +1,12 @@
 {-# LANGUAGE LambdaCase #-}
 
 module Figures.FiveSix
-  ( neval )
-  where
+  ( Exp (..)
+  , Env
+  , Store
+  , neval
+  , neval1
+  ) where
 
 import Prelude hiding (lookup)
 
@@ -92,6 +96,7 @@ neval1 recur = \case
   Op bin l' r' -> do
     l <- recur l'
     r <- recur r'
+    (App (Rec "f" (Lam "n" (If (Var "n") (Num 1) (Op Mul (Var "n") (App (Var "f") (Op Sub (Var n) 1)))))) (Num 5))
     ẟ bin l r
   Rec f e -> do
     a <- alloc f

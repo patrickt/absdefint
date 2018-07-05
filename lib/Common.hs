@@ -75,6 +75,7 @@ instance Num Exp where
   signum = error "signum over Exp not defined"
 
 
+-- TODO change the order around
 type Evaluator exp effs = exp -> Eff effs exp
 
 -- Smart constructors; not in the original paper
