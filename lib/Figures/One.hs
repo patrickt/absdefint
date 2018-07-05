@@ -1,8 +1,10 @@
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE LambdaCase, MonoLocalBinds #-}
+{-# LANGUAGE LambdaCase #-}
 
 module Figures.One
-  ( eval )
+  ( eval
+  , eval1
+  )
   where
 
 import Prelude hiding (lookup)
@@ -16,13 +18,14 @@ import Data.Map (lookup, insert)
 
 import Figures.Two
 
+type EvalMonad = '[Reader Env, State Store, Error Failure]
 
 eval1 :: ( Member (Reader Env) effs
          , Member (State Store) effs
          , Member (Error Failure) effs
          )
-      => (Exp -> Eff effs Exp)
-      -> (Exp -> Eff effs Exp)
+      => Evaluator effs
+      -> Evaluator effs
 eval1 recur = \case
   Num i ->
     pure (Num i)
@@ -53,7 +56,10 @@ eval1 recur = \case
   Closure e _ ->
     pure e
 
-eval :: Exp
-     -> Either Failure Exp
-eval = run . runError . evalState mempty . runReader mempty . go
-  where go = fix (eval1 @'[Reader Env, State Store, Error Failure])
+eval :: Exp -> Either Failure Exp
+eval = run
+       . runError
+       . evalState mempty
+       . runReader mempty
+       . go
+  where go = fix (eval1 @EvalMonad)

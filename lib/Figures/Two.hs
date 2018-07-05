@@ -1,9 +1,8 @@
-{-# LANGUAGE MonoLocalBinds #-}
-
 module Figures.Two
     ( Bin (..)
     , Exp (..)
     , Failure (..)
+    , Evaluator
     , Env
     , ID
     , Name
@@ -45,9 +44,21 @@ data Exp
   | Closure Exp Env      -- | Datum + scope
     deriving (Eq, Show)
 
+instance Num Exp where
+  fromInteger = Num . fromInteger
+  (+) = Op Add
+  (-) = Op Sub
+  (*) = Op Mul
+
+  negate = Op Sub 0
+  abs = error "abs over Exp not defined"
+  signum = error "signum over Exp not defined"
+
 -- N.B. 'Closure' is not defined as a syntax type in ADI, but this is
 -- the cleanest place to put it, considering that in the paper they
 -- paper over it with a specious little cons. I see y'all.
+
+type Evaluator effs = Exp -> Eff effs Exp
 
 isZero :: Exp -> Bool
 isZero = (== (Num 0))
