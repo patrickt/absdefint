@@ -21,8 +21,8 @@ import Figures.Two
 type EvalMonad = '[Reader Env, State Store, Error Failure]
 
 eval1 :: Members EvalMonad effs
-      => Evaluator effs
-      -> Evaluator effs
+      => Evaluator Exp effs
+      -> Evaluator Exp effs
 eval1 recur = \case
   Num i ->
     pure (Num i)

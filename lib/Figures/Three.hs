@@ -24,9 +24,9 @@ type TraceMonad = '[ Reader Env
                    ]
 
 evalTrace1 :: Members TraceMonad effs
-           => (Evaluator effs -> Evaluator effs)
-           -> Evaluator effs
-           -> Evaluator effs
+           => (Evaluator Exp effs -> Evaluator Exp effs)
+           -> Evaluator Exp effs
+           -> Evaluator Exp effs
 evalTrace1 base recur e = do
   traced <- Log e <$> ask <*> get
   tell [traced]

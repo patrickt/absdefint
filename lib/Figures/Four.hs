@@ -19,9 +19,9 @@ type DeadMonad = '[ Reader Env
                   ]
 
 evalDead1 :: Members DeadMonad effs
-          => (Evaluator effs -> Evaluator effs)
-          -> Evaluator effs
-          -> Evaluator effs
+          => (Evaluator Exp effs -> Evaluator Exp effs)
+          -> Evaluator Exp effs
+          -> Evaluator Exp effs
 evalDead1 base recur e = do
   modify (delete e)
   (base recur) e

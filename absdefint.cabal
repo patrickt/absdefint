@@ -15,10 +15,12 @@ cabal-version:       >=1.10
 
 library
   hs-source-dirs:      lib
-  exposed-modules:     Figures.One
+  exposed-modules:     Common
+                       Figures.One
                        Figures.Two
                        Figures.Three
                        Figures.Four
+                       Figures.FiveSix
   ghc-options:         -Wall -Werror
   build-depends:       base
                      , mtl
